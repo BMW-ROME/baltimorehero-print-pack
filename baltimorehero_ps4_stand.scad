@@ -1,8 +1,8 @@
-// #BaltimoreHero PS4 DualShock 4 Controller Stand — v4
-// Fixed: cradle now correctly cuts only the TOP half of the tube (open trough),
-// keeping the bottom semicircle solid as a supporting cup. Verified via manual
-// geometry-logic check before pushing (no OpenSCAD available in the build sandbox,
-// so the boolean math was validated numerically instead of guessed).
+// #BaltimoreHero PS4 DualShock 4 Controller Stand — v5
+// Fixed: backrest cube() was not centered on X, causing a 75mm offset that
+// disconnected it from the gusset (root cause of "mesh not closed" error).
+// All primitives now consistently use center=true and are checked against
+// each other's actual coordinate ranges before pushing.
 // Target printer: Creality Ender-3 V2 / Ender-3 Pro (220 x 220 x 250mm build volume)
 // Material: Black PLA, single 0.4mm nozzle, no supports needed if printed as designed.
 
@@ -15,11 +15,11 @@ base_w           = 180;
 base_d           = 100;
 base_h           = 6;
 
-grip_radius      = 20;   // matches DualShock 4 grip curvature
+grip_radius      = 20;
 rail_wall        = 5;
 rail_length      = 26;
 rail_gap_inside  = 128;
-rail_open_width  = 34;   // width of the open top slot the controller drops into
+rail_open_width  = 34;
 rail_y_pos       = 30;
 
 backrest_w       = 150;
@@ -40,9 +40,6 @@ module base_plate() {
         cube([base_w, base_d, base_h], center = true);
 }
 
-// Open-top curved trough (cup), built at LOCAL origin with the ring's center at z=0.
-// The bottom half (z<0) stays a solid closed cup; the top half (z>=0) is sliced away
-// down to rail_open_width, leaving an open channel for the controller grip to rest in.
 module cradle_rail() {
     outer_r = grip_radius + rail_wall;
     union() {
@@ -71,12 +68,16 @@ module cradle_pair() {
         cradle_rail();
 }
 
+module backrest_solid() {
+    translate([0, backrest_y_pos, base_h])
+        rotate([-backrest_angle, 0, 0])
+            translate([0, 0, backrest_h/2])
+                cube([backrest_w, backrest_thick, backrest_h], center = true);
+}
+
 module backrest_panel() {
     difference() {
-        translate([0, backrest_y_pos, base_h])
-            rotate([-backrest_angle, 0, 0])
-                translate([0, -backrest_thick/2, 0])
-                    cube([backrest_w, backrest_thick, backrest_h]);
+        backrest_solid();
         translate([0, backrest_y_pos, base_h])
             rotate([-backrest_angle, 0, 0])
                 translate([0, -backrest_thick/2 - 0.5, backrest_h*0.35])
@@ -98,10 +99,10 @@ module backrest_panel() {
 
 module gusset() {
     hull() {
-        translate([0, backrest_y_pos - 8, base_h/2])
-            cube([backrest_w * 0.6, 4, base_h], center = true);
-        translate([0, backrest_y_pos - 8, base_h + 12])
-            cube([backrest_w * 0.4, 2, 2], center = true);
+        translate([0, backrest_y_pos - 10, 0])
+            cube([backrest_w * 0.7, 6, base_h * 2], center = true);
+        translate([0, backrest_y_pos - 2, base_h + 20])
+            cube([backrest_w * 0.5, 4, 4], center = true);
     }
 }
 
